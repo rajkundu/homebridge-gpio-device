@@ -460,32 +460,35 @@ function LockMechanism(accesory, log, config) {
 LockMechanism.prototype = {
 	setLockState: function (value, callback) {
 		if (value == Characteristic.LockTargetState.UNSECURED) {
-			this.log("Open LockMechanism on PIN: " + this.pin);
+			this.log("Manual open LockMechanism on PIN: " + this.pin);
 			gpio.write(this.pin, this.OUTPUT_ACTIVE);
 			callback();
 			if (this.inputPin === null) {
-				setTimeout(function () {
-					this.state.updateValue(Characteristic.LockCurrentState.UNSECURED);
-				}.bind(this), 1000);
+				this.state.updateValue(Characteristic.LockCurrentState.UNSECURED);
 			}
 			if (this.duration) {
 				setTimeout(function () {
-					this.log("Close LockMechanism on PIN: " + this.pin);
+					this.log("Auto-close LockMechanism on PIN: " + this.pin);
 					gpio.write(this.pin, this.OUTPUT_INACTIVE);
 					this.target.updateValue(Characteristic.LockTargetState.SECURED);
 					if (this.inputPin === null) {
+						this.log("Lock secured (automatically)");
 						this.state.updateValue(Characteristic.LockCurrentState.SECURED);
 					}
 				}.bind(this), this.duration * 1000);
 			}
 		} else {
-			this.log("Close LockMechanism on PIN: " + this.pin);
-			gpio.write(this.pin, this.OUTPUT_INACTIVE);
-			callback();
-			if (this.inputPin === null) {
-				setTimeout(function () {
+			this.log("Manual close LockMechanism on PIN: " + this.pin);
+			if (this.duration) {
+				callback();
+				this.log("Waiting for scheduled change back to SECURED state...");
+			} else {
+				gpio.write(this.pin, this.OUTPUT_INACTIVE);
+				callback();
+				if (this.inputPin === null) {
+					this.log("Lock secured (manually)");
 					this.state.updateValue(Characteristic.LockCurrentState.SECURED);
-				}.bind(this), 1000);
+				}
 			}
 		}
 	},
@@ -1020,3 +1023,4 @@ ProgrammableSwitch.prototype = {
 		}
 	}
 }
+
